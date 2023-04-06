@@ -1,6 +1,6 @@
 select
-    customer_id, 
+    order_id, 
     avg(amount) as average_amount
-from {{ ref('orders') }}
+from {{ ref('stg_payments') }}
 group by 1
-having count(customer_id) > 1 and average_amount < 1
+having count(order_id) > 1 and average_amount < 1
