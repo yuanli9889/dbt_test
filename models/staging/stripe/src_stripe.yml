@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: stripe
+    database: dcs-test-379723
+    schema: raw
+    tables:
+      - name: payments
+        loaded_at_field: _created # this field has to be within the source table
+        freshness: 
+          warn_after:
+            count: 3000
+            period: day
+          error_after:
+            count: 6000
+            period: day
