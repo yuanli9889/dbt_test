@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: jaffle_shop #names of the source, can be anything, but better to be the actual source name; it is used as reference
+    database: dcs-test-379723
+    schema: raw
+    tables:
+      - name: customers
+      - name: orders
+
+        

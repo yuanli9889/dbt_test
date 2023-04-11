@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: stg_payments
+    columns: 
+      - name: amount
+        tests:
+          - not_null
+          - assert_dollars_spent_are_greater_than_one
+          - average_dollars_spent_greater_than_one:
+             group_by_column: order_id
