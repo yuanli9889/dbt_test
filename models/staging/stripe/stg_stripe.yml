@@ -2,6 +2,10 @@ version: 2
 
 models:
   - name: stg_payments
+    # failed
+    # tests:
+    #   - dbt_utils.expression_is_true:
+    #       expression: "amount < 0 "
     columns: 
       - name: amount
         tests:
@@ -9,3 +13,5 @@ models:
           - assert_dollars_spent_are_greater_than_one
           - average_dollars_spent_greater_than_one:
              group_by_column: order_id
+      - name: payment_status
+        description: '{{doc("payment_status") }}'
