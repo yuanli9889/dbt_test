@@ -1,0 +1,9 @@
+version: 2
+# configure source
+sources:
+  - name: austin_crime #names of the source, can be anything, but better to be the actual source name; it is used as reference
+    database: dcs-test-379723
+    schema: raw
+    tables:
+      - name: austin_crime
+
