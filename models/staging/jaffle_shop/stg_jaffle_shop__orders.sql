@@ -11,6 +11,12 @@ transformed as (
         id as order_id,
         user_id as customer_id,
         status as order_status,
+
+        case 
+            when status not in ('returned','return_pending') 
+            then order_date 
+        end as valid_order_date,
+
         order_date,
         row_number() over (
             partition by user_id 

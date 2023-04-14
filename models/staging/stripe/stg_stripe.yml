@@ -7,7 +7,7 @@ models:
     #   - dbt_utils.expression_is_true:
     #       expression: "amount < 0 "
     columns: 
-      - name: amount
+      - name: payment_amount
         tests:
           - not_null
           - assert_dollars_spent_are_greater_than_one

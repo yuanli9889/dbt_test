@@ -1,5 +1,109 @@
 with
 
+customers as (
+    select * from {{ ref('stg_jaffle_shop__customers') }}
+),
+
+orders as (
+    select * from {{ ref('int_orders') }} --imported an intermedia model
+),
+
+payments as (
+    select * from {{ ref('stg_stripe__payments') }}
+),
+
+customer_orders as (
+
+    select 
+        orders.*,
+        -- customers.customer_id,
+        customers.surname,
+        customers.givenname,
+        customers.full_name, 
+
+        --customer level aggregations
+        min(orders.order_date) over (
+            partition by orders.customer_id
+        )as first_order_date,
+
+        min(orders.valid_order_date) over (
+            partition by orders.customer_id
+        ) as first_non_returned_order_date,
+
+        max(orders.valid_order_date)  over (
+            partition by orders.customer_id
+        ) as most_recent_non_returned_order_date,
+
+        count(*)  over (
+            partition by orders.customer_id
+        ) as order_count,
+        -- coalesce(max(user_order_seq),0)  over (
+        --     partition by orders.customer_id
+        -- ) as order_count,
+
+        -- sum(nvl2(orders.valid_order_date, 1, 0)) over(
+        --     partition by orders.customer_id
+        -- ) as customer_non_returned_order_count,
+
+        coalesce(count(case 
+            when orders.valid_order_date is not null
+            then 1 end) over (
+            partition by orders.customer_id
+        ) ,
+            0
+        )  as non_returned_order_count,        
+
+        sum(case 
+            when orders.valid_order_date is not null
+            then orders.order_value_dollars
+            else 0 
+        end) over (
+            partition by orders.customer_id
+        ) as total_lifetime_value,        
+
+        array_agg(orders.order_id) over(
+            partition by orders.customer_id
+            ) as order_ids 
+
+    from orders 
+    join customers
+    on orders.customer_id = customers.customer_id
+
+),
+
+avg_order_values as (
+    select 
+        *,
+        total_lifetime_value / non_returned_order_count as avg_non_returned_order_value
+    from customer_orders
+),
+
+
+final as (
+
+    select 
+
+        order_id,
+        customer_id,
+        surname,
+        givenname,
+        first_order_date,
+        order_count,
+        total_lifetime_value,
+        order_value_dollars,
+        order_status,
+        payment_status
+
+    from avg_order_values
+)
+
+
+-- Simple Select Statement
+select * from final
+
+
+
+
 -- Import CTEs => moved to staging
 -- customers_base as (
 
@@ -25,84 +129,112 @@ with
 
 -- ),
 
-orders as (
-    select * from {{ ref('stg_jaffle_shop__orders') }}
-),
+-- orders as (
+--     select * from {{ ref('stg_jaffle_shop__orders') }}
+-- ),
 
-customers as (
-    select * from {{ ref('stg_jaffle_shop__customers') }}
-),
+-- payments as (
+--     select * from {{ ref('stg_stripe__payments') }}
+--     where payment_status != 'fail' -- example of centralising logic, instead of having two where below
+-- ),
 
-payments as (
-    select * from {{ ref('stg_stripe__payments') }}
-),
 
+
+-- furthur refactoring after CTE grouping and moving CTE to stg, putting order_values_joined to intermedia => int_ , along with above import CTE
+
+-- order_totals as (
+--     select 
+--         order_id,
+--         payment_status,
+--         sum(payment_amount) as order_value_dollars
+--     from payments
+--     group by 1,2
+
+-- ),
+
+-- order_values_joined as (
+--     select 
+--         orders.*,
+--         order_totals.payment_status,
+--         order_totals.order_value_dollars
+--     from orders 
+--     left join order_totals
+--         on orders.order_id = order_totals.order_id
+-- ),
 
 
 
 ---marts
 
-customer_order_history as (
+-- this is an aggregating CTE to order level, can be treat as intermediate model 
+-- customer_order_history as (
 
-    select 
+--     select 
         
-        customers.customer_id,
-        customers.surname,
-        customers.givenname,
-        customers.full_name, 
+--         customers.customer_id,
+--         customers.surname,
+--         customers.givenname,
+--         customers.full_name, 
+--         min(orders.order_date) as first_order_date,
 
-        min(order_date) as first_order_date,
+-- -- further refactoring: move messy code to stg
+--         -- min(case 
+--         --     when orders.order_status not in ('returned','return_pending') 
+--         --     then order_date 
+--         -- end) as first_non_returned_order_date,
+--         min(orders.valid_order_date) as first_non_returned_order_date,
 
-        min(case 
-            when orders.order_status not in ('returned','return_pending') 
-            then order_date 
-        end) as first_non_returned_order_date,
+--         max(orders.valid_order_date) as most_recent_non_returned_order_date,
 
-        max(case 
-            when orders.order_status not in ('returned','return_pending') 
-            then order_date 
-        end) as most_recent_non_returned_order_date,
+--         coalesce(max(user_order_seq),0) as order_count,
 
-        coalesce(max(user_order_seq),0) as order_count,
+-- --use same logic 
+--         -- coalesce(count(case 
+--         --     when orders.order_status != 'returned' 
+--         --     then 1 end),
+--         --     0
+--         -- ) as non_returned_order_count,
+--         coalesce(count(case 
+--             when orders.valid_order_date is not null
+--             then 1 end),
+--             0
+--         ) as non_returned_order_count,        
 
-        coalesce(count(case 
-            when orders.order_status != 'returned' 
-            then 1 end),
-            0
-        ) as non_returned_order_count,
+--         -- sum(case 
+--         --     when orders.order_status not in ('returned','return_pending') 
+--         --     then payment_amount
+--         --     else 0 
+--         -- end) as total_lifetime_value,
+--         sum(case 
+--             when orders.valid_order_date is not null
+--             then orders.order_value_dollars
+--             else 0 
+--         end) as total_lifetime_value,        
 
-        sum(case 
-            when orders.order_status not in ('returned','return_pending') 
-            then payment_amount
-            else 0 
-        end) as total_lifetime_value,
+--         sum(case 
+--             when orders.valid_order_date is not null
+--             then orders.order_value_dollars
+--             else 0 
+--         end)
+--         / nullif(count(case 
+--             when orders.valid_order_date is not null
+--             then 1 end),
+--             0
+--         ) as avg_non_returned_order_value,
 
-        sum(case 
-            when orders.order_status not in ('returned','return_pending') 
-            then payment_amount
-            else 0 
-        end)
-        / nullif(count(case 
-            when orders.order_status not in ('returned','return_pending') 
-            then 1 end),
-            0
-        ) as avg_non_returned_order_value,
+--         array_agg(distinct orders.order_id) as order_ids
 
-        array_agg(distinct orders.order_id) as order_ids
+--     from orders 
 
-    from orders
+--     join customers
+--     on orders.customer_id = customers.customer_id
 
-    join customers
-    on orders.customer_id = customers.customer_id
+--     -- left outer join payments
+--     -- on order_values_joined.order_id = payments.order_id
 
-    left outer join payments
-    on orders.order_id = payments.order_id
+--     -- group by customers.customer_id, customers.full_name, customers.givenname, customers.surname
 
-    where orders.order_status not in ('pending') and payments.payment_status != 'fail'
-
-    group by customers.customer_id, customers.full_name, customers.givenname, customers.surname
-
-),
+-- ),
 
 
 
@@ -113,43 +245,43 @@ customer_order_history as (
 
 -- Final CTEs 
 -- marts
-final as (
+-- final as (
 
-    select 
+--     select 
 
-        orders.order_id as order_id,
-        orders.customer_id,
-        customers.surname,
-        customers.givenname,
-        first_order_date,
-        order_count,
-        total_lifetime_value,
-        payment_amount as order_value_dollars,
-        orders.order_status as order_status,
-        payments.payment_status as payment_status
+--         orders.order_id as order_id,
+--         orders.customer_id,
+--         customers.surname,
+--         customers.givenname,
+--         first_order_date,
+--         order_count,
+--         total_lifetime_value,
+--         payment_amount as order_value_dollars,
+--         orders.order_status as order_status,
+--         payments.payment_status as payment_status
 
-    from orders
+--     from orders
 
-    join customers
-    on orders.customer_id = customers.customer_id
+--     join customers
+--     on orders.customer_id = customers.customer_id
 
-    join customer_order_history
-    on orders.customer_id = customer_order_history.customer_id
+--     join customer_order_history
+--     on orders.customer_id = customer_order_history.customer_id
 
-    left outer join payments
-    on orders.order_id = payments.order_id
+--     left outer join payments
+--     on orders.order_id = payments.order_id
 
-    where payments.payment_status != 'fail'
+--     -- where payments.payment_status != 'fail'
 
-)
-
-
+-- )
 
 
 
 
--- Simple Select Statement
-select * from final
+
+
+-- -- Simple Select Statement
+-- select * from final
 
 
 

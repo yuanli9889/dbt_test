@@ -24,7 +24,7 @@ models:
         tests:
           - unique
           - not_null
-      - name: status
+      - name: order_status
         description: '{{ doc("order_status") }}'      # the doc file created under the same folder
         tests:
           - accepted_values:
