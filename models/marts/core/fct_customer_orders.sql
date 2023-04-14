@@ -104,6 +104,19 @@ select * from final
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 -- Import CTEs => moved to staging
 -- customers_base as (
 
