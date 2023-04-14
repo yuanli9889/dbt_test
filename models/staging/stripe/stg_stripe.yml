@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: stg_payments
+  - name: stg_stripe__payments
     # failed
     # tests:
     #   - dbt_utils.expression_is_true:

@@ -1,3 +1,6 @@
+-- This is the origin code before refactoring!
+-- Compare with fct_customer_orders to see code improvement.
+
 select 
     orders.id as order_id,
     orders.user_id as customer_id,
