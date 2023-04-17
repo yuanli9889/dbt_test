@@ -3,7 +3,7 @@
 version: 2
 
 models:
-  - name: stg_customers
+  - name: stg_jaffle_shop__customers
     description: Staged customer data from our jaffle shop app.
     columns: 
       - name: customer_id
@@ -16,7 +16,7 @@ models:
       - name: last_name
         description: Customers' family name
 
-  - name: stg_orders
+  - name: stg_jaffle_shop__orders
     description: Staged order data from our jaffle shop app.
     columns:
       - name: order_id
@@ -24,7 +24,7 @@ models:
         tests:
           - unique
           - not_null
-      - name: status
+      - name: order_status
         description: '{{ doc("order_status") }}'      # the doc file created under the same folder
         tests:
           - accepted_values:
