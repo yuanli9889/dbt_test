@@ -11,9 +11,11 @@ models:
         tests:
           - unique:
               config:
-                severity: warn
-                error_if: ">30"
-                warn_if: ">10"
+                store_failures: true
+                schema: test_failures
+                # severity: warn
+                # error_if: ">30"
+                # warn_if: ">10"
           - not_null:
               config:
                 limit: 10 # limit config for tests for dbt
