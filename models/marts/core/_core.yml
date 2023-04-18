@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: fct_orders
+    columns:
+      - name: customer_id
+        tests:
+          - unique: #supposed to fail
+              config:
+                where: "order_date > '2018-03-01'" # practise condition
+                #severity: "warn" # changing fail behaviour 
+                error_if: ">1000"
+                warn_if: ">5"

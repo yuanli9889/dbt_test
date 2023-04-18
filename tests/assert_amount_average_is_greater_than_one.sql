@@ -1,3 +1,10 @@
+{{
+    config(
+        severty='warn'
+    )
+}}
+
+
 select
     order_id, 
     avg(amount) as average_amount
